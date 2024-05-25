@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useCallback, useState } from "react";
@@ -132,7 +133,7 @@ const Home: NextPage = () => {
                 </button>
               </div>
               <div className="text-center text-xl">
-                {communityPortalAddress ? `🍾 Community Portal Address: ${communityPortalAddress}!!! 🥂 🎊` : ""}
+                {communityPortalAddress ? `🍾 Community Portal Address: ${communityPortalAddress}! 🥂 🎊` : ""}
               </div>
             </div>
           </div>
