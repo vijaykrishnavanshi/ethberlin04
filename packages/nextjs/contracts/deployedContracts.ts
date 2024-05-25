@@ -4,6 +4,202 @@
  */
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
-const deployedContracts = {} as const;
+const deployedContracts = {
+  11155111: {
+    CommunityPortal: {
+      address: "0x900789Ef2EF4dAdA77fFcaa170012651Ba0936F0",
+      abi: [
+        {
+          inputs: [],
+          stateMutability: "nonpayable",
+          type: "constructor",
+        },
+        {
+          inputs: [
+            {
+              components: [
+                {
+                  internalType: "uint256[2]",
+                  name: "_pA",
+                  type: "uint256[2]",
+                },
+                {
+                  internalType: "uint256[2][2]",
+                  name: "_pB",
+                  type: "uint256[2][2]",
+                },
+                {
+                  internalType: "uint256[2]",
+                  name: "_pC",
+                  type: "uint256[2]",
+                },
+                {
+                  internalType: "uint256[38]",
+                  name: "_pubSignals",
+                  type: "uint256[38]",
+                },
+              ],
+              internalType: "struct CommunityPortal.ProofArgs",
+              name: "proof",
+              type: "tuple",
+            },
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "addCommunityCollaborator",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "communityPortal",
+          outputs: [
+            {
+              internalType: "contract FileversePortal",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256[38]",
+              name: "_pubSignals",
+              type: "uint256[38]",
+            },
+          ],
+          name: "getSignerFromPublicSignals",
+          outputs: [
+            {
+              internalType: "uint256[2]",
+              name: "",
+              type: "uint256[2]",
+            },
+          ],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256[38]",
+              name: "_pubSignals",
+              type: "uint256[38]",
+            },
+          ],
+          name: "getValidEventIdFromPublicSignals",
+          outputs: [
+            {
+              internalType: "uint256[]",
+              name: "",
+              type: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256[38]",
+              name: "_pubSignals",
+              type: "uint256[38]",
+            },
+          ],
+          name: "getWaterMarkFromPublicSignals",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "name",
+          outputs: [
+            {
+              internalType: "string",
+              name: "",
+              type: "string",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "owner",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "trustedForwarder",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256[2]",
+              name: "_pA",
+              type: "uint256[2]",
+            },
+            {
+              internalType: "uint256[2][2]",
+              name: "_pB",
+              type: "uint256[2][2]",
+            },
+            {
+              internalType: "uint256[2]",
+              name: "_pC",
+              type: "uint256[2]",
+            },
+            {
+              internalType: "uint256[38]",
+              name: "_pubSignals",
+              type: "uint256[38]",
+            },
+          ],
+          name: "verifyProof",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+      ],
+    },
+  },
+} as const;
 
 export default deployedContracts satisfies GenericContractsDeclaration;

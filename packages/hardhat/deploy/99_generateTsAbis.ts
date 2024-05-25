@@ -4,7 +4,7 @@
  * This script generates the file containing the contracts Abi definitions.
  * These definitions are used to derive the types needed in the custom scaffold-eth hooks, for example.
  * This script should run as the last deploy script.
- */
+ *  */
 
 import * as fs from "fs";
 import prettier from "prettier";
@@ -16,9 +16,6 @@ const generatedContractComment = `
  * You should not edit it manually or your changes might be overwritten.
  */
 `;
-
-const DEPLOYMENTS_DIR = "./deployments";
-const ARTIFACTS_DIR = "./artifacts";
 
 function getDirectories(path: string) {
   return fs
@@ -34,46 +31,7 @@ function getContractNames(path: string) {
     .map(dirent => dirent.name.split(".")[0]);
 }
 
-function getActualSourcesForContract(sources: Record<string, any>, contractName: string) {
-  for (const sourcePath of Object.keys(sources)) {
-    const sourceName = sourcePath.split("/").pop()?.split(".sol")[0];
-    if (sourceName === contractName) {
-      const contractContent = sources[sourcePath].content as string;
-      const regex = /contract\s+(\w+)\s+is\s+([^{}]+)\{/;
-      const match = contractContent.match(regex);
-
-      if (match) {
-        const inheritancePart = match[2];
-        // Split the inherited contracts by commas to get the list of inherited contracts
-        const inheritedContracts = inheritancePart.split(",").map(contract => `${contract.trim()}.sol`);
-
-        return inheritedContracts;
-      }
-      return [];
-    }
-  }
-  return [];
-}
-
-function getInheritedFunctions(sources: Record<string, any>, contractName: string) {
-  const actualSources = getActualSourcesForContract(sources, contractName);
-  const inheritedFunctions = {} as Record<string, any>;
-
-  for (const sourceContractName of actualSources) {
-    const sourcePath = Object.keys(sources).find(key => key.includes(`/${sourceContractName}`));
-    if (sourcePath) {
-      const sourceName = sourcePath?.split("/").pop()?.split(".sol")[0];
-      const { abi } = JSON.parse(fs.readFileSync(`${ARTIFACTS_DIR}/${sourcePath}/${sourceName}.json`).toString());
-      for (const functionAbi of abi) {
-        if (functionAbi.type === "function") {
-          inheritedFunctions[functionAbi.name] = sourcePath;
-        }
-      }
-    }
-  }
-
-  return inheritedFunctions;
-}
+const DEPLOYMENTS_DIR = "./deployments";
 
 function getContractDataFromDeployments() {
   if (!fs.existsSync(DEPLOYMENTS_DIR)) {
@@ -84,11 +42,10 @@ function getContractDataFromDeployments() {
     const chainId = fs.readFileSync(`${DEPLOYMENTS_DIR}/${chainName}/.chainId`).toString();
     const contracts = {} as Record<string, any>;
     for (const contractName of getContractNames(`${DEPLOYMENTS_DIR}/${chainName}`)) {
-      const { abi, address, metadata } = JSON.parse(
+      const { abi, address } = JSON.parse(
         fs.readFileSync(`${DEPLOYMENTS_DIR}/${chainName}/${contractName}.json`).toString(),
       );
-      const inheritedFunctions = getInheritedFunctions(JSON.parse(metadata).sources, contractName);
-      contracts[contractName] = { address, abi, inheritedFunctions };
+      contracts[contractName] = { address, abi };
     }
     output[chainId] = contracts;
   }

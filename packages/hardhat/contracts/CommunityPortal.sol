@@ -1,19 +1,19 @@
-//SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./FileversePortal.sol";
+import "./structs/PortalKeyVerifiers.sol";
 import "./Groth16Verifier.sol";
 
-/**
- * A smart contract that uses a Groth16 verifier to mint ERC721 tokens.
- * @author BuidlGuidl
- */
-contract YourCollectible is ERC721, Groth16Verifier {
-	// ----------------------
-	// Predefined constants |
-	// ----------------------
+contract CommunityPortal is Groth16Verifier {
+    string public constant name = "Community Owned Portal";
 
-	// This us the ETHBerlin event UUID converted to bigint
+    // address of community owned portal
+    FileversePortal public immutable communityPortal;
+    address public owner;
+    address public trustedForwarder = 0x31470b3126DD7cee5ee7591C2cb5142A68F57120;
+
+    // This us the ETHBerlin event UUID converted to bigint
 	uint256[1] VALID_EVENT_IDS = [
 		111560146890584288369567824893314450802
 	];
@@ -24,25 +24,29 @@ contract YourCollectible is ERC721, Groth16Verifier {
 		7654374482676219729919246464135900991450848628968334062174564799457623790084
 	];
 
-	// ----------------------
-	// State variables      |
-	// ----------------------
-
-	uint256 private _nextTokenId;
-	mapping(address => bool) public minted;
-
-	struct ProofArgs {
+    struct ProofArgs {
 		uint256[2] _pA;
 		uint256[2][2] _pB;
 		uint256[2] _pC;
 		uint256[38] _pubSignals;
 	}
 
-	// ----------------------
-	// Modifiers            |
-	// ----------------------
+    constructor() {
+        owner = address(this);
+        PortalKeyVerifiers.KeyVerifier memory verifier = PortalKeyVerifiers.KeyVerifier(0x0, 0x0, 0x0, 0x0);
+        string memory metadataIPFSHash = "QmNSM3RTrhhtK8UJESTJYBEWygUHV2DPedxDJfHiVphVVB";
+        string memory emptyString = "dummyvalue";
+        communityPortal = new FileversePortal(
+            metadataIPFSHash,
+            emptyString,
+            emptyString,
+            owner,
+            trustedForwarder,
+            verifier
+        );
+    }
 
-	modifier verifiedProof(ProofArgs calldata proof) {
+    modifier verifiedProof(ProofArgs calldata proof) {
 		require(
 			this.verifyProof(
 				proof._pA,
@@ -55,7 +59,7 @@ contract YourCollectible is ERC721, Groth16Verifier {
 		_;
 	}
 
-	modifier validEventIds(uint256[38] memory _pubSignals) {
+    	modifier validEventIds(uint256[38] memory _pubSignals) {
 		uint256[] memory eventIds = getValidEventIdFromPublicSignals(
 			_pubSignals
 		);
@@ -85,33 +89,17 @@ contract YourCollectible is ERC721, Groth16Verifier {
 		_;
 	}
 
-	modifier notMinted() {
-		require(!minted[msg.sender], "Already minted");
-		_;
-	}
-
-	constructor() ERC721("YourCollectible", "YCB") {}
-
-	function mintItem(
-		ProofArgs calldata proof
-	)
-		public
+    function addCommunityCollaborator(
+        ProofArgs calldata proof,
+        address account
+    ) 
+        public
 		verifiedProof(proof)
 		validEventIds(proof._pubSignals)
 		validSigner(proof._pubSignals)
-		notMinted
-	{
-		uint256 tokenId = _nextTokenId++;
-		minted[msg.sender] = true;
-		_safeMint(msg.sender, tokenId);
-	}
-
-	function tokenURI(
-		uint256 _tokenId
-	) public view override returns (string memory) {
-		require(_tokenId < _nextTokenId, "tokenId does not exist");
-		return "https://austingriffith.com/images/paintings/buffalo.jpg";
-	}
+    {
+        communityPortal.addCollaborator(account);
+    }
 
 	// ----------------------------------------------------------
 	// Utility functions for destructuring a proof publicSignals|
