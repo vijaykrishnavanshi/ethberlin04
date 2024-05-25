@@ -6,7 +6,7 @@ import type { NextPage } from "next";
 import { ENTRYPOINT_ADDRESS_V07, createSmartAccountClient } from "permissionless";
 import { signerToSafeSmartAccount } from "permissionless/accounts";
 import { createPimlicoBundlerClient, createPimlicoPaymasterClient } from "permissionless/clients/pimlico";
-import { createPublicClient, encodeFunctionData, http, toHex, toBytes } from "viem";
+import { createPublicClient, encodeFunctionData, http, toBytes, toHex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { useAccount } from "wagmi";
@@ -29,98 +29,363 @@ export const pimlicoBundlerClient = createPimlicoBundlerClient({
   entryPoint: ENTRYPOINT_ADDRESS_V07,
 });
 
-const CommunityPortalABI = [
+const PortalABI = [
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: "string",
+        name: "_metadataIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_ownerViewDid",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_ownerEditDid",
+        type: "string",
+      },
+      {
+        internalType: "address",
+        name: "owner",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_trustedForwarder",
+        type: "address",
+      },
+      {
+        components: [
+          {
+            internalType: "bytes32",
+            name: "portalEncryptionKeyVerifier",
+            type: "bytes32",
+          },
+          {
+            internalType: "bytes32",
+            name: "portalDecryptionKeyVerifier",
+            type: "bytes32",
+          },
+          {
+            internalType: "bytes32",
+            name: "memberEncryptionKeyVerifier",
+            type: "bytes32",
+          },
+          {
+            internalType: "bytes32",
+            name: "memberDecryptionKeyVerifier",
+            type: "bytes32",
+          },
+        ],
+        internalType: "struct PortalKeyVerifiers.KeyVerifier",
+        name: "_keyVerifier",
+        type: "tuple",
+      },
+    ],
     stateMutability: "nonpayable",
     type: "constructor",
   },
   {
+    anonymous: false,
     inputs: [
       {
-        components: [
-          {
-            internalType: "uint256[2]",
-            name: "_pA",
-            type: "uint256[2]",
-          },
-          {
-            internalType: "uint256[2][2]",
-            name: "_pB",
-            type: "uint256[2][2]",
-          },
-          {
-            internalType: "uint256[2]",
-            name: "_pC",
-            type: "uint256[2]",
-          },
-          {
-            internalType: "uint256[38]",
-            name: "_pubSignals",
-            type: "uint256[38]",
-          },
-        ],
-        internalType: "struct CommunityPortal.ProofArgs",
-        name: "proof",
-        type: "tuple",
+        indexed: true,
+        internalType: "address",
+        name: "account",
+        type: "address",
       },
       {
+        indexed: true,
+        internalType: "address",
+        name: "by",
+        type: "address",
+      },
+    ],
+    name: "AddedCollaborator",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "fileId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "metadataIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "contentIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "gateIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "by",
+        type: "address",
+      },
+    ],
+    name: "AddedFile",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "fileId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "metadataIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "contentIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "gateIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "by",
+        type: "address",
+      },
+    ],
+    name: "EditedFile",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "previousOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferStarted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "previousOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
         internalType: "address",
         name: "account",
         type: "address",
       },
     ],
-    name: "addCommunityCollaborator",
+    name: "RegisteredCollaboratorKeys",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "by",
+        type: "address",
+      },
+    ],
+    name: "RemovedCollaborator",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+    ],
+    name: "RemovedCollaboratorKeys",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "bytes32",
+        name: "portalEncryptionKeyVerifier",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "bytes32",
+        name: "portalDecryptionKeyVerifier",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "bytes32",
+        name: "memberEncryptionKeyVerifier",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "bytes32",
+        name: "memberDecryptionKeyVerifier",
+        type: "bytes32",
+      },
+    ],
+    name: "UpdatedKeyVerifiers",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "string",
+        name: "metadataIPFSHash",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "by",
+        type: "address",
+      },
+    ],
+    name: "UpdatedPortalMetadata",
+    type: "event",
+  },
+  {
+    inputs: [],
+    name: "acceptOwnership",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [],
-    name: "communityPortal",
-    outputs: [
+    inputs: [
       {
-        internalType: "contract FileversePortal",
+        internalType: "address",
+        name: "collaborator",
+        type: "address",
+      },
+    ],
+    name: "addCollaborator",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_metadataIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_contentIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_gateIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "enum FileversePortal.FileType",
+        name: "filetype",
+        type: "uint8",
+      },
+      {
+        internalType: "uint256",
+        name: "version",
+        type: "uint256",
+      },
+    ],
+    name: "addFile",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
         name: "",
         type: "address",
       },
     ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256[38]",
-        name: "_pubSignals",
-        type: "uint256[38]",
-      },
-    ],
-    name: "getSignerFromPublicSignals",
+    name: "collaboratorKeys",
     outputs: [
       {
-        internalType: "uint256[2]",
-        name: "",
-        type: "uint256[2]",
+        internalType: "string",
+        name: "viewDid",
+        type: "string",
       },
-    ],
-    stateMutability: "pure",
-    type: "function",
-  },
-  {
-    inputs: [
       {
-        internalType: "uint256[38]",
-        name: "_pubSignals",
-        type: "uint256[38]",
-      },
-    ],
-    name: "getValidEventIdFromPublicSignals",
-    outputs: [
-      {
-        internalType: "uint256[]",
-        name: "",
-        type: "uint256[]",
+        internalType: "string",
+        name: "editDid",
+        type: "string",
       },
     ],
     stateMutability: "view",
@@ -129,12 +394,83 @@ const CommunityPortalABI = [
   {
     inputs: [
       {
-        internalType: "uint256[38]",
-        name: "_pubSignals",
-        type: "uint256[38]",
+        internalType: "uint256",
+        name: "fileId",
+        type: "uint256",
+      },
+      {
+        internalType: "string",
+        name: "_metadataIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_contentIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_gateIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "enum FileversePortal.FileType",
+        name: "filetype",
+        type: "uint8",
+      },
+      {
+        internalType: "uint256",
+        name: "version",
+        type: "uint256",
       },
     ],
-    name: "getWaterMarkFromPublicSignals",
+    name: "editFile",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "files",
+    outputs: [
+      {
+        internalType: "string",
+        name: "metadataIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "contentIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "gateIPFSHash",
+        type: "string",
+      },
+      {
+        internalType: "enum FileversePortal.FileType",
+        name: "fileType",
+        type: "uint8",
+      },
+      {
+        internalType: "uint256",
+        name: "version",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCollaboratorCount",
     outputs: [
       {
         internalType: "uint256",
@@ -142,7 +478,46 @@ const CommunityPortalABI = [
         type: "uint256",
       },
     ],
-    stateMutability: "pure",
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCollaboratorKeysCount",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCollaborators",
+    outputs: [
+      {
+        internalType: "address[]",
+        name: "",
+        type: "address[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getFileCount",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -165,8 +540,61 @@ const CommunityPortalABI = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "forwarder",
+        type: "address",
+      },
+    ],
+    name: "isTrustedForwarder",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "keyVerifiers",
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "portalEncryptionKeyVerifier",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "portalDecryptionKeyVerifier",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "memberEncryptionKeyVerifier",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "memberDecryptionKeyVerifier",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
-    name: "name",
+    name: "metadataIPFSHash",
     outputs: [
       {
         internalType: "string",
@@ -192,7 +620,7 @@ const CommunityPortalABI = [
   },
   {
     inputs: [],
-    name: "trustedForwarder",
+    name: "pendingOwner",
     outputs: [
       {
         internalType: "address",
@@ -206,745 +634,107 @@ const CommunityPortalABI = [
   {
     inputs: [
       {
-        internalType: "uint256[2]",
-        name: "_pA",
-        type: "uint256[2]",
+        internalType: "string",
+        name: "viewDid",
+        type: "string",
       },
       {
-        internalType: "uint256[2][2]",
-        name: "_pB",
-        type: "uint256[2][2]",
-      },
-      {
-        internalType: "uint256[2]",
-        name: "_pC",
-        type: "uint256[2]",
-      },
-      {
-        internalType: "uint256[38]",
-        name: "_pubSignals",
-        type: "uint256[38]",
+        internalType: "string",
+        name: "editDid",
+        type: "string",
       },
     ],
-    name: "verifyProof",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
+    name: "registerCollaboratorKeys",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
-];
-
-const PortalABI = [
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "string",
-        "name": "_metadataIPFSHash",
-        "type": "string"
+        internalType: "address",
+        name: "prevCollaborator",
+        type: "address",
       },
       {
-        "internalType": "string",
-        "name": "_ownerViewDid",
-        "type": "string"
+        internalType: "address",
+        name: "collaborator",
+        type: "address",
       },
-      {
-        "internalType": "string",
-        "name": "_ownerEditDid",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_trustedForwarder",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "portalEncryptionKeyVerifier",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "portalDecryptionKeyVerifier",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "memberEncryptionKeyVerifier",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "memberDecryptionKeyVerifier",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct PortalKeyVerifiers.KeyVerifier",
-        "name": "_keyVerifier",
-        "type": "tuple"
-      }
     ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    name: "removeCollaborator",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "AddedCollaborator",
-    "type": "event"
+    inputs: [],
+    name: "removeCollaboratorKeys",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "fileId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "metadataIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "contentIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "gateIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "AddedFile",
-    "type": "event"
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "fileId",
-        "type": "uint256"
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
       },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "metadataIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "contentIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "gateIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
     ],
-    "name": "EditedFile",
-    "type": "event"
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
+        internalType: "bytes32",
+        name: "portalEncryptionKeyVerifier",
+        type: "bytes32",
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnershipTransferStarted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
+        internalType: "bytes32",
+        name: "portalDecryptionKeyVerifier",
+        type: "bytes32",
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "RegisteredCollaboratorKeys",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
+        internalType: "bytes32",
+        name: "memberEncryptionKeyVerifier",
+        type: "bytes32",
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
+        internalType: "bytes32",
+        name: "memberDecryptionKeyVerifier",
+        type: "bytes32",
+      },
     ],
-    "name": "RemovedCollaborator",
-    "type": "event"
+    name: "updateKeyVerifiers",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
+        internalType: "string",
+        name: "_metadataIPFSHash",
+        type: "string",
+      },
     ],
-    "name": "RemovedCollaboratorKeys",
-    "type": "event"
+    name: "updateMetadata",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "portalEncryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "portalDecryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "memberEncryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "memberDecryptionKeyVerifier",
-        "type": "bytes32"
-      }
-    ],
-    "name": "UpdatedKeyVerifiers",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "metadataIPFSHash",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "UpdatedPortalMetadata",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "acceptOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "collaborator",
-        "type": "address"
-      }
-    ],
-    "name": "addCollaborator",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_metadataIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_contentIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_gateIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "enum FileversePortal.FileType",
-        "name": "filetype",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "version",
-        "type": "uint256"
-      }
-    ],
-    "name": "addFile",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "collaboratorKeys",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "viewDid",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "editDid",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "fileId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_metadataIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_contentIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_gateIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "enum FileversePortal.FileType",
-        "name": "filetype",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "version",
-        "type": "uint256"
-      }
-    ],
-    "name": "editFile",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "files",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "metadataIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "contentIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "gateIPFSHash",
-        "type": "string"
-      },
-      {
-        "internalType": "enum FileversePortal.FileType",
-        "name": "fileType",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "version",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getCollaboratorCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getCollaboratorKeysCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getCollaborators",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "",
-        "type": "address[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getFileCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "isCollaborator",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "forwarder",
-        "type": "address"
-      }
-    ],
-    "name": "isTrustedForwarder",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "keyVerifiers",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "portalEncryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "portalDecryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "memberEncryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "memberDecryptionKeyVerifier",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "metadataIPFSHash",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "pendingOwner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "viewDid",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "editDid",
-        "type": "string"
-      }
-    ],
-    "name": "registerCollaboratorKeys",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "prevCollaborator",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "collaborator",
-        "type": "address"
-      }
-    ],
-    "name": "removeCollaborator",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "removeCollaboratorKeys",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "portalEncryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "portalDecryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "memberEncryptionKeyVerifier",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "memberDecryptionKeyVerifier",
-        "type": "bytes32"
-      }
-    ],
-    "name": "updateKeyVerifiers",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_metadataIPFSHash",
-        "type": "string"
-      }
-    ],
-    "name": "updateMetadata",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
 ];
 
 // Get a valid event id from { supportedEvents } from "zuauth" or https://api.zupass.org/issue/known-ticket-types
@@ -981,7 +771,7 @@ const Home: NextPage = () => {
       signer: signer,
       safeVersion: "1.4.1",
     });
-  }, []);
+  }, [signer]);
 
   // mintItem verifies the proof on-chain and mints an NFT
   const { writeContractAsync: addCollborator, isPending: isAddingCollborator } =
@@ -1037,7 +827,7 @@ const Home: NextPage = () => {
     const res = await userOperation.prepareUserOperationRequest({
       userOperation: {
         callData, // callData is the only required field in the partial user operation
-        nonce: toHex(toBytes(generatePrivateKey()).slice(0, 24), { size: 32 }),
+        nonce: toHex(toBytes(generatePrivateKey()).slice(0, 24), { size: 32 }) as any,
         maxFeePerGas: gasPrices.fast.maxFeePerGas,
         maxPriorityFeePerGas: gasPrices.fast.maxPriorityFeePerGas,
       },
