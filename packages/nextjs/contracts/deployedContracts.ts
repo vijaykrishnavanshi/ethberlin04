@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   11155111: {
     CommunityPortal: {
-      address: "0x900789Ef2EF4dAdA77fFcaa170012651Ba0936F0",
+      address: "0x5BD8669A700565a5237671ee33A5Cc4cDaBF01bF",
       abi: [
         {
           inputs: [],
@@ -122,6 +122,25 @@ const deployedContracts = {
             },
           ],
           stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "isCollaborator",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
           type: "function",
         },
         {

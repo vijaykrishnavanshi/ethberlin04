@@ -2,42 +2,57 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ZKEdDSAEventTicketPCDPackage } from "@pcd/zk-eddsa-event-ticket-pcd";
 import { zuAuthPopup } from "@pcd/zuauth";
 import type { NextPage } from "next";
-import { hexToBigInt } from "viem";
+import { ENTRYPOINT_ADDRESS_V07 } from "permissionless";
+import { signerToSafeSmartAccount } from "permissionless/accounts";
+import { createPublicClient, http } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
-import { generateWitness, isETHBerlinPublicKey } from "~~/utils/scaffold-eth/pcd";
+import { generateWitness } from "~~/utils/scaffold-eth/pcd";
 import { ETHBERLIN_ZUAUTH_CONFIG } from "~~/utils/zupassConstants";
+
+const publicClient = createPublicClient({
+  transport: http("https://rpc.ankr.com/eth_sepolia"),
+});
 
 // Get a valid event id from { supportedEvents } from "zuauth" or https://api.zupass.org/issue/known-ticket-types
 const fieldsToReveal = {
-  revealAttendeeEmail: true,
   revealEventId: true,
   revealProductId: true,
 };
 
 const Home: NextPage = () => {
   const [identityCreated, setIdentityCreated] = useState(false);
-  const [fileUploded, setFileUploded] = useState(false);
+  const [fileUploaded] = useState(false);
   const [addedCommunityContributor, setAddedCommunityContributor] = useState(false);
   const { address: connectedAddress } = useAccount();
+  const [identityAddress, setIdentityAddress] = useState<null | string>(null);
   const [pcd, setPcd] = useState<string>();
+  const signer = privateKeyToAccount(generatePrivateKey());
 
   const getProof = useCallback(async () => {
     if (!connectedAddress) {
       notification.error("Please connect wallet");
       return;
     }
-    const result = await zuAuthPopup({ fieldsToReveal, watermark: connectedAddress, config: ETHBERLIN_ZUAUTH_CONFIG });
+    const result = await zuAuthPopup({ fieldsToReveal, watermark: 12345n, config: ETHBERLIN_ZUAUTH_CONFIG });
     if (result.type === "pcd") {
       setPcd(JSON.parse(result.pcdStr).pcd);
     } else {
       notification.error("Failed to parse PCD");
     }
   }, [connectedAddress]);
+
+  const safeAccount = useCallback(async () => {
+    return await signerToSafeSmartAccount(publicClient, {
+      entryPoint: ENTRYPOINT_ADDRESS_V07,
+      signer: signer,
+      safeVersion: "1.4.1",
+    });
+  }, []);
 
   // mintItem verifies the proof on-chain and mints an NFT
   const { writeContractAsync: addCollborator, isPending: isAddingCollborator } =
@@ -65,13 +80,13 @@ const Home: NextPage = () => {
                   className="btn btn-primary w-full"
                   disabled={!pcd || identityCreated}
                   onClick={async () => {
-                    // try {
-                    //   await addCommunityCollaborator();
-                    // } catch (e) {
-                    //   notification.error(`Error: ${e}`);
-                    //   return;
-                    // }
-                    // setAddedCommunityContributor(true);
+                    try {
+                      const res = await safeAccount();
+                      setIdentityCreated(true);
+                      setIdentityAddress(res.address);
+                    } catch (e) {
+                      console.log(e);
+                    }
                   }}
                 >
                   {"2. Create New Identity"}
@@ -89,7 +104,7 @@ const Home: NextPage = () => {
                       await addCollborator({
                         functionName: "addCommunityCollaborator",
                         // @ts-ignore TODO: fix the type later with readonly fixed length bigInt arrays
-                        args: [pcd ? generateWitness(JSON.parse(pcd)) : undefined, connectedAddress],
+                        args: [pcd ? generateWitness(JSON.parse(pcd)) : undefined, identityAddress],
                       });
                     } catch (e) {
                       notification.error(`Error: ${e}`);
@@ -108,7 +123,7 @@ const Home: NextPage = () => {
               <div className="tooltip" data-tip="Upload file and put it on community portal">
                 <button
                   className="btn btn-primary w-full"
-                  disabled={!pcd || fileUploded}
+                  disabled={!pcd || fileUploaded}
                   onClick={async () => {
                     // try {
                     //   await addCommunityCollaborator();

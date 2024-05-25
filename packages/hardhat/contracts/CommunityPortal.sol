@@ -101,6 +101,10 @@ contract CommunityPortal is Groth16Verifier {
         communityPortal.addCollaborator(account);
     }
 
+    function isCollaborator(address account) public view returns (bool) {
+        return communityPortal.isCollaborator(account);
+    }
+
 	// ----------------------------------------------------------
 	// Utility functions for destructuring a proof publicSignals|
 	// ----------------------------------------------------------

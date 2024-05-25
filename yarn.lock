@@ -2592,6 +2592,7 @@ __metadata:
     next: ^14.0.4
     next-themes: ^0.2.1
     nprogress: ^0.2.0
+    permissionless: ^0.1.29
     postcss: ^8.4.16
     prettier: ^2.8.4
     qrcode.react: ^3.1.0
@@ -11838,6 +11839,15 @@ __metadata:
   version: 1.2.0
   resolution: "pend@npm:1.2.0"
   checksum: 6c72f5243303d9c60bd98e6446ba7d30ae29e3d56fdb6fae8767e8ba6386f33ee284c97efe3230a0d0217e2b1723b8ab490b1bbf34fcbb2180dbc8a9de47850d
+  languageName: node
+  linkType: hard
+
+"permissionless@npm:^0.1.29":
+  version: 0.1.29
+  resolution: "permissionless@npm:0.1.29"
+  peerDependencies:
+    viem: ^2.9.17
+  checksum: b18bec3ff4985380aa32794b9992364f513d322f3b5ec7d09bc5c30a73a99c1a3e677139b5e02bdc61ef32109bc543956a56b73d5de5f7672e01a63c97d97205
   languageName: node
   linkType: hard
 
