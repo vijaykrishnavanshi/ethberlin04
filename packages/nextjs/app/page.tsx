@@ -47,10 +47,6 @@ const Home: NextPage = () => {
   const signer = privateKeyToAccount(generatePrivateKey());
 
   const getProof = useCallback(async () => {
-    if (!connectedAddress) {
-      notification.error("Please connect wallet");
-      return;
-    }
     setLogArray([...logArray, 'Requested PCD']);
     const result = await zuAuthPopup({ fieldsToReveal, watermark: 12345n, config: ETHBERLIN_ZUAUTH_CONFIG });
     if (result.type === "pcd") {
@@ -59,7 +55,7 @@ const Home: NextPage = () => {
     } else {
       notification.error("Failed to parse PCD");
     }
-  }, [connectedAddress]);
+  }, []);
 
   const safeAccount = useCallback(async () => {
     const account = await signerToSafeSmartAccount(publicClient, {
@@ -216,7 +212,7 @@ const Home: NextPage = () => {
             >
               <button
                 className="btn btn-primary w-full"
-                disabled={!pcd || addedCommunityContributor}
+                disabled={!identityCreated || addedCommunityContributor}
                 onClick={async () => {
                   try {
                     setLogArray([...logArray, `[Add Collaborator] Adding identity: ${identityAddress}`]);
@@ -247,7 +243,7 @@ const Home: NextPage = () => {
 
               <button
                 className="btn btn-primary"
-                disabled={!pcd || fileUploaded}
+                disabled={!addedCommunityContributor || fileUploaded}
                 onClick={async () => {
                   try {
                     setLogArray([...logArray, `[Upload File] Uploading....`]);
