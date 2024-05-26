@@ -15,16 +15,16 @@ import { notification } from "~~/utils/scaffold-eth";
 import { generateWitness } from "~~/utils/scaffold-eth/pcd";
 import { ETHBERLIN_ZUAUTH_CONFIG } from "~~/utils/zupassConstants";
 
-export const publicClient = createPublicClient({
+const publicClient = createPublicClient({
   transport: http("https://rpc.ankr.com/eth_sepolia"),
 });
 
-export const paymasterClient = createPimlicoPaymasterClient({
+const paymasterClient = createPimlicoPaymasterClient({
   transport: http(`https://api.pimlico.io/v2/sepolia/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`),
   entryPoint: ENTRYPOINT_ADDRESS_V07,
 });
 
-export const pimlicoBundlerClient = createPimlicoBundlerClient({
+const pimlicoBundlerClient = createPimlicoBundlerClient({
   transport: http(`https://api.pimlico.io/v2/sepolia/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`),
   entryPoint: ENTRYPOINT_ADDRESS_V07,
 });
@@ -796,6 +796,7 @@ const Home: NextPage = () => {
     });
   };
 
+  // @ts-ignore
   const getCallData = async ({ metadataIPFSHash, contentIPFSHash, fileType, safeAccount }) => {
     const callData = await safeAccount.encodeCallData({
       to: communityPortalAddress,
