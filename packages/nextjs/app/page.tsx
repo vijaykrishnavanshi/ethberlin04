@@ -40,7 +40,6 @@ const Home: NextPage = () => {
   const [identityCreated, setIdentityCreated] = useState(false);
   const [fileUploaded, setFileUploaded] = useState(false);
   const [addedCommunityContributor, setAddedCommunityContributor] = useState(false);
-  const { address: connectedAddress } = useAccount();
   const [identityAddress, setIdentityAddress] = useState<null | string>(null);
   const [pcd, setPcd] = useState<string>();
   const [logArray, setLogArray] = useState<string[]>([]);
