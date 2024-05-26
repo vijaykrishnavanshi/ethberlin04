@@ -315,7 +315,7 @@ const Home: NextPage = () => {
       {logArray.length > 0 && (
         <div className="card sm:max-w-lg bg-base-100 shadow-xl h-80 w-80">
           <div className="card-body">
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-2 break-words">
               {logArray.map(log => {
                 return <li key={log}>{log}</li>;
               })}
