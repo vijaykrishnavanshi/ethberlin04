@@ -43,6 +43,7 @@ const Home: NextPage = () => {
   const { address: connectedAddress } = useAccount();
   const [identityAddress, setIdentityAddress] = useState<null | string>(null);
   const [pcd, setPcd] = useState<string>();
+  const [logArray, setLogArray] = useState<string[]>([]);
   const signer = privateKeyToAccount(generatePrivateKey());
 
   const getProof = useCallback(async () => {
@@ -50,11 +51,11 @@ const Home: NextPage = () => {
       notification.error("Please connect wallet");
       return;
     }
-    console.log('Requested PCD');
+    setLogArray([...logArray, 'Requested PCD']);
     const result = await zuAuthPopup({ fieldsToReveal, watermark: 12345n, config: ETHBERLIN_ZUAUTH_CONFIG });
     if (result.type === "pcd") {
       setPcd(JSON.parse(result.pcdStr).pcd);
-      console.log('Recieved PCD');
+      setLogArray([...logArray, 'Recieved PCD Successfully']);
     } else {
       notification.error("Failed to parse PCD");
     }
@@ -90,6 +91,7 @@ const Home: NextPage = () => {
     });
   };
 
+  // @ts-ignore
   const getFileUploadCallData = async ({ metadataIPFSHash, contentIPFSHash, fileType, safeAccount }) => {
     const callData = await safeAccount.encodeCallData({
       to: communityPortalAddress,
@@ -105,7 +107,6 @@ const Home: NextPage = () => {
 
   const uploadFile = async () => {
     const account = await safeAccount();
-    console.log({ idenity: account.address });
     const callData = await getFileUploadCallData({
       safeAccount: account,
       metadataIPFSHash: "QmbgqqoYHAMbZT3SUrcZDvqoxgA2o2Gd6db4G2cu5gVVTu",
@@ -131,7 +132,8 @@ const Home: NextPage = () => {
     const receipt = await pimlicoBundlerClient.waitForUserOperationReceipt({
       hash: txnHash,
     });
-    console.log('txn reciept: ', `https://sepolia.etherscan.io/tx/${receipt.receipt.transactionHash}`);
+    const txnLink = `https://sepolia.etherscan.io/tx/${receipt.receipt.transactionHash}`;
+    return txnLink;
   };
 
   const getAddCommunityContributorCallData = async ({ pcd, identityAddress, safeAccount }) => {
@@ -173,12 +175,14 @@ const Home: NextPage = () => {
     const receipt = await pimlicoBundlerClient.waitForUserOperationReceipt({
       hash: txnHash,
     });
-    console.log('txn reciept: ', `https://sepolia.etherscan.io/tx/${receipt.receipt.transactionHash}`);
+    const txnLink = `https://sepolia.etherscan.io/tx/${receipt.receipt.transactionHash}`;
+    console.log('txn reciept: ', txnLink);
+    return txnLink;
   };
 
   return (
-    <div className="flex flex-col items-center mt-24">
-      <div className="card max-w-[90%] sm:max-w-lg bg-base-100 shadow-xl">
+    <div className="flex flex-row items-center w-70 mx-auto mt-24 gap-10">
+      <div className="card sm:max-w-lg bg-base-100 shadow-xl">
         <div className="card-body">
           <h2 className="card-title">Community Identity for Collaboration</h2>
           <div className="flex flex-col gap-4 mt-6">
@@ -193,10 +197,11 @@ const Home: NextPage = () => {
                 disabled={!pcd || identityCreated}
                 onClick={async () => {
                   try {
+                    setLogArray([...logArray, '[Identity] Generting...']);
                     const res = await safeAccount();
-                    console.log('Created Identity: ', res.address);
                     setIdentityCreated(true);
                     setIdentityAddress(res.address);
+                    setLogArray([...logArray, `[Identity] Generated: ${res.address}`]);
                   } catch (e) {
                     console.log(e);
                   }
@@ -214,12 +219,13 @@ const Home: NextPage = () => {
                 disabled={!pcd || addedCommunityContributor}
                 onClick={async () => {
                   try {
-                    console.log('adding collaborator: ', identityAddress);
-                    await addCommunityContributor({
+                    setLogArray([...logArray, `[Add Collaborator] Adding identity: ${identityAddress}`]);
+                    const txnLink = await addCommunityContributor({
                       pcd: pcd ? generateWitness(JSON.parse(pcd)) : undefined,
                       identityAddress,
                     });
                     console.log('added collaborator: ', identityAddress);
+                    setLogArray([...logArray, `[Add Collaborator] Txn Link: ${txnLink}`]);
                   } catch (e) {
                     notification.error(`Error: ${e}`);
                     return;
@@ -230,17 +236,28 @@ const Home: NextPage = () => {
                 {"3. Verify (on-chain) and add community collaborator"}
               </button>
             </div>
-            <div className="tooltip" data-tip="Upload file and put it on community portal">
+            <div className="tooltip flex gap-2" data-tip="Upload file and put it on community portal">
+              <select className="select select-bordered w-full max-w-xs">
+                <option disabled selected>
+                  Select file
+                </option>
+                <option>File 1</option>
+                <option>File 2</option>
+              </select>
+
               <button
-                className="btn btn-primary w-full"
+                className="btn btn-primary"
                 disabled={!pcd || fileUploaded}
                 onClick={async () => {
                   try {
-                    await uploadFile();
+                    setLogArray([...logArray, `[Upload File] Uploading....`]);
+                    const txnLink = await uploadFile();
+                    setLogArray([...logArray, `[Upload File] Txn Link: ${txnLink}`]);
                   } catch (e) {
                     console.log(e);
                   }
                   setFileUploaded(true);
+                  console.log('uploaded file');
                 }}
               >
                 {"4. Add to community archive"}
@@ -256,12 +273,24 @@ const Home: NextPage = () => {
                 Reset
               </button>
             </div>
-            <div className="text-center text-xl">
+            <div className="text-center text-md">
               {communityPortalAddress ? `🍾 Community Portal Address: ${communityPortalAddress}! 🥂 🎊` : ""}
             </div>
           </div>
         </div>
       </div>
+
+      {logArray.length > 0 && (
+        <div className="card sm:max-w-lg bg-base-100 shadow-xl h-80 w-80">
+          <div className="card-body">
+            <ul className="flex flex-col gap-2">
+              {logArray.map(log => {
+                return <li key={log}>{log}</li>;
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
