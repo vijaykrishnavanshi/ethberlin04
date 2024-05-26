@@ -10,7 +10,6 @@ import { createPimlicoBundlerClient, createPimlicoPaymasterClient } from "permis
 import { createPublicClient, encodeFunctionData, http, toBytes, toHex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 import { generateWitness } from "~~/utils/scaffold-eth/pcd";
@@ -36,21 +35,50 @@ const fieldsToReveal = {
   revealProductId: true,
 };
 
+const ipfsData = [
+  {
+    name: "DOD Logo",
+    metadataIPFSHash: "QmaYR8bTifCL3VJbcoanRPdFGjsyb5dC9tW3n7v1wXBZT4",
+    contentIPFSHash: "Qmctiwn4XCAdBB8iFypDjQ4jnLovfQTwtGrY5TqAqmdyc1",
+  },
+  {
+    name: "Meme 1",
+    metadataIPFSHash: "QmVrU6gEjuSrQAMhH3SiaCL8ywzfMnChNXessDSCAiq8yD",
+    contentIPFSHash: "QmWuCme9onWzhtkE6iRpdCDaSNfWc2AbwUq7MGGqFFgCMQ",
+  },
+  {
+    name: "Meme 2",
+    metadataIPFSHash: "QmYfi93fZDEmWok3sKDs8MnJjtAeq2UTx8gb6bRuZud2Wk",
+    contentIPFSHash: "QmWj3jzC2bSsryNXyAc4D6MXmdyeGqwM8a3rEXKFQ5p4rP",
+  },
+  {
+    name: "Meme 3",
+    metadataIPFSHash: "QmPfWMYB13mxyQYQ4G747iLcoR5UzjgsedGDiGPQXUBrrT",
+    contentIPFSHash: "QmUSSzs1GW3gd6YCTrFBsbBnPzqk9qL7auU7wQHDjMQzwS",
+  },
+];
+
 const Home: NextPage = () => {
   const [identityCreated, setIdentityCreated] = useState(false);
   const [fileUploaded, setFileUploaded] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<any>({});
   const [addedCommunityContributor, setAddedCommunityContributor] = useState(false);
   const [identityAddress, setIdentityAddress] = useState<null | string>(null);
   const [pcd, setPcd] = useState<string>();
   const [logArray, setLogArray] = useState<string[]>([]);
   const signer = privateKeyToAccount(generatePrivateKey());
 
+  const handleChangeFile = (fileName: string) => {
+    const foundFile = ipfsData.find(item => item.name === fileName);
+    setSelectedFile(foundFile);
+  };
+
   const getProof = useCallback(async () => {
-    setLogArray([...logArray, 'Requested PCD']);
+    setLogArray([...logArray, "Requested PCD"]);
     const result = await zuAuthPopup({ fieldsToReveal, watermark: 12345n, config: ETHBERLIN_ZUAUTH_CONFIG });
     if (result.type === "pcd") {
       setPcd(JSON.parse(result.pcdStr).pcd);
-      setLogArray([...logArray, 'Recieved PCD Successfully']);
+      setLogArray([...logArray, "Recieved PCD Successfully"]);
     } else {
       notification.error("Failed to parse PCD");
     }
@@ -104,8 +132,8 @@ const Home: NextPage = () => {
     const account = await safeAccount();
     const callData = await getFileUploadCallData({
       safeAccount: account,
-      metadataIPFSHash: "QmbgqqoYHAMbZT3SUrcZDvqoxgA2o2Gd6db4G2cu5gVVTu",
-      contentIPFSHash: "QmYtiLzEhaJafgiBWTAYqkgd61wmtnV5p77Y2scBhyNXbF",
+      metadataIPFSHash: selectedFile.metadataIPFSHash ?? "QmbgqqoYHAMbZT3SUrcZDvqoxgA2o2Gd6db4G2cu5gVVTu",
+      contentIPFSHash: selectedFile.contentIPFSHash ?? "QmYtiLzEhaJafgiBWTAYqkgd61wmtnV5p77Y2scBhyNXbF",
       fileType: 0,
     });
     const gasPrices = await pimlicoBundlerClient.getUserOperationGasPrice();
@@ -123,7 +151,7 @@ const Home: NextPage = () => {
 
     userOperation.signature = await account.signUserOperation(userOperation);
     const txnHash = await smartAccountClient.sendUserOperation({ userOperation });
-    console.log('Pimlicon Txn: ', txnHash);
+    console.log("Pimlicon Txn: ", txnHash);
     const receipt = await pimlicoBundlerClient.waitForUserOperationReceipt({
       hash: txnHash,
     });
@@ -232,12 +260,21 @@ const Home: NextPage = () => {
               </button>
             </div>
             <div className="tooltip flex gap-2" data-tip="Upload file and put it on community portal">
-              <select className="select select-bordered w-full max-w-xs">
-                <option disabled selected>
+              <select
+                className="select select-bordered w-full max-w-xs"
+                value={selectedFile?.name}
+                onChange={e => handleChangeFile(e.target.value)}
+              >
+                <option disabled value="">
                   Select file
                 </option>
-                <option>File 1</option>
-                <option>File 2</option>
+                {ipfsData.map(file => {
+                  return (
+                    <option value={file.name} key={file.name}>
+                      {file.name}
+                    </option>
+                  );
+                })}
               </select>
 
               <button
@@ -252,7 +289,7 @@ const Home: NextPage = () => {
                     console.log(e);
                   }
                   setFileUploaded(true);
-                  console.log('uploaded file');
+                  console.log("uploaded file");
                 }}
               >
                 {"4. Add to community archive"}
