@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { CommunityPortalABI, PortalABI } from "./abis";
 import { zuAuthPopup } from "@pcd/zuauth";
 import type { NextPage } from "next";
 import { ENTRYPOINT_ADDRESS_V07, createSmartAccountClient } from "permissionless";
@@ -10,732 +11,24 @@ import { createPublicClient, encodeFunctionData, http, toBytes, toHex } from "vi
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { useAccount } from "wagmi";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 import { generateWitness } from "~~/utils/scaffold-eth/pcd";
 import { ETHBERLIN_ZUAUTH_CONFIG } from "~~/utils/zupassConstants";
 
-const publicClient = createPublicClient({
+export const publicClient = createPublicClient({
   transport: http("https://rpc.ankr.com/eth_sepolia"),
 });
 
-const paymasterClient = createPimlicoPaymasterClient({
+export const paymasterClient = createPimlicoPaymasterClient({
   transport: http(`https://api.pimlico.io/v2/sepolia/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`),
   entryPoint: ENTRYPOINT_ADDRESS_V07,
 });
 
-const pimlicoBundlerClient = createPimlicoBundlerClient({
+export const pimlicoBundlerClient = createPimlicoBundlerClient({
   transport: http(`https://api.pimlico.io/v2/sepolia/rpc?apikey=${process.env.NEXT_PUBLIC_PIMLICO_API_KEY}`),
   entryPoint: ENTRYPOINT_ADDRESS_V07,
 });
-
-const PortalABI = [
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_metadataIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_ownerViewDid",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_ownerEditDid",
-        type: "string",
-      },
-      {
-        internalType: "address",
-        name: "owner",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "_trustedForwarder",
-        type: "address",
-      },
-      {
-        components: [
-          {
-            internalType: "bytes32",
-            name: "portalEncryptionKeyVerifier",
-            type: "bytes32",
-          },
-          {
-            internalType: "bytes32",
-            name: "portalDecryptionKeyVerifier",
-            type: "bytes32",
-          },
-          {
-            internalType: "bytes32",
-            name: "memberEncryptionKeyVerifier",
-            type: "bytes32",
-          },
-          {
-            internalType: "bytes32",
-            name: "memberDecryptionKeyVerifier",
-            type: "bytes32",
-          },
-        ],
-        internalType: "struct PortalKeyVerifiers.KeyVerifier",
-        name: "_keyVerifier",
-        type: "tuple",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "by",
-        type: "address",
-      },
-    ],
-    name: "AddedCollaborator",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "fileId",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "metadataIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "contentIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "gateIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "by",
-        type: "address",
-      },
-    ],
-    name: "AddedFile",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "fileId",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "metadataIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "contentIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "gateIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "by",
-        type: "address",
-      },
-    ],
-    name: "EditedFile",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "previousOwner",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
-    name: "OwnershipTransferStarted",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "previousOwner",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
-    name: "OwnershipTransferred",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-    ],
-    name: "RegisteredCollaboratorKeys",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "by",
-        type: "address",
-      },
-    ],
-    name: "RemovedCollaborator",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-    ],
-    name: "RemovedCollaboratorKeys",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "bytes32",
-        name: "portalEncryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        indexed: false,
-        internalType: "bytes32",
-        name: "portalDecryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        indexed: false,
-        internalType: "bytes32",
-        name: "memberEncryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        indexed: false,
-        internalType: "bytes32",
-        name: "memberDecryptionKeyVerifier",
-        type: "bytes32",
-      },
-    ],
-    name: "UpdatedKeyVerifiers",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "string",
-        name: "metadataIPFSHash",
-        type: "string",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "by",
-        type: "address",
-      },
-    ],
-    name: "UpdatedPortalMetadata",
-    type: "event",
-  },
-  {
-    inputs: [],
-    name: "acceptOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "collaborator",
-        type: "address",
-      },
-    ],
-    name: "addCollaborator",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_metadataIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_contentIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_gateIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "enum FileversePortal.FileType",
-        name: "filetype",
-        type: "uint8",
-      },
-      {
-        internalType: "uint256",
-        name: "version",
-        type: "uint256",
-      },
-    ],
-    name: "addFile",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    name: "collaboratorKeys",
-    outputs: [
-      {
-        internalType: "string",
-        name: "viewDid",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "editDid",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "fileId",
-        type: "uint256",
-      },
-      {
-        internalType: "string",
-        name: "_metadataIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_contentIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_gateIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "enum FileversePortal.FileType",
-        name: "filetype",
-        type: "uint8",
-      },
-      {
-        internalType: "uint256",
-        name: "version",
-        type: "uint256",
-      },
-    ],
-    name: "editFile",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "files",
-    outputs: [
-      {
-        internalType: "string",
-        name: "metadataIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "contentIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "gateIPFSHash",
-        type: "string",
-      },
-      {
-        internalType: "enum FileversePortal.FileType",
-        name: "fileType",
-        type: "uint8",
-      },
-      {
-        internalType: "uint256",
-        name: "version",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCollaboratorCount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCollaboratorKeysCount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCollaborators",
-    outputs: [
-      {
-        internalType: "address[]",
-        name: "",
-        type: "address[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getFileCount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-    ],
-    name: "isCollaborator",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "forwarder",
-        type: "address",
-      },
-    ],
-    name: "isTrustedForwarder",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "keyVerifiers",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "portalEncryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "portalDecryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "memberEncryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "memberDecryptionKeyVerifier",
-        type: "bytes32",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "metadataIPFSHash",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "owner",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "pendingOwner",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "viewDid",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "editDid",
-        type: "string",
-      },
-    ],
-    name: "registerCollaboratorKeys",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "prevCollaborator",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "collaborator",
-        type: "address",
-      },
-    ],
-    name: "removeCollaborator",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "removeCollaboratorKeys",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "renounceOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
-    name: "transferOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "portalEncryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "portalDecryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "memberEncryptionKeyVerifier",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "memberDecryptionKeyVerifier",
-        type: "bytes32",
-      },
-    ],
-    name: "updateKeyVerifiers",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_metadataIPFSHash",
-        type: "string",
-      },
-    ],
-    name: "updateMetadata",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-];
 
 // Get a valid event id from { supportedEvents } from "zuauth" or https://api.zupass.org/issue/known-ticket-types
 const fieldsToReveal = {
@@ -745,7 +38,7 @@ const fieldsToReveal = {
 
 const Home: NextPage = () => {
   const [identityCreated, setIdentityCreated] = useState(false);
-  const [fileUploaded] = useState(false);
+  const [fileUploaded, setFileUploaded] = useState(false);
   const [addedCommunityContributor, setAddedCommunityContributor] = useState(false);
   const { address: connectedAddress } = useAccount();
   const [identityAddress, setIdentityAddress] = useState<null | string>(null);
@@ -757,33 +50,34 @@ const Home: NextPage = () => {
       notification.error("Please connect wallet");
       return;
     }
+    console.log('Requested PCD');
     const result = await zuAuthPopup({ fieldsToReveal, watermark: 12345n, config: ETHBERLIN_ZUAUTH_CONFIG });
     if (result.type === "pcd") {
       setPcd(JSON.parse(result.pcdStr).pcd);
+      console.log('Recieved PCD');
     } else {
       notification.error("Failed to parse PCD");
     }
   }, [connectedAddress]);
 
   const safeAccount = useCallback(async () => {
-    return await signerToSafeSmartAccount(publicClient, {
+    const account = await signerToSafeSmartAccount(publicClient, {
       entryPoint: ENTRYPOINT_ADDRESS_V07,
       signer: signer,
+      saltNonce: 0n,
       safeVersion: "1.4.1",
     });
-  }, [signer]);
-
-  // mintItem verifies the proof on-chain and mints an NFT
-  const { writeContractAsync: addCollborator, isPending: isAddingCollborator } =
-    useScaffoldWriteContract("CommunityPortal");
+    return account;
+  }, []);
 
   const { data: communityPortalAddress } = useScaffoldReadContract({
     contractName: "CommunityPortal",
     functionName: "communityPortal",
   });
 
-  const createSmartAccount = async () => {
+  const initialiseSmartAccountClient = async () => {
     const account = await safeAccount();
+    console.log(account.address);
     return createSmartAccountClient({
       account,
       entryPoint: ENTRYPOINT_ADDRESS_V07,
@@ -796,8 +90,7 @@ const Home: NextPage = () => {
     });
   };
 
-  // @ts-ignore
-  const getCallData = async ({ metadataIPFSHash, contentIPFSHash, fileType, safeAccount }) => {
+  const getFileUploadCallData = async ({ metadataIPFSHash, contentIPFSHash, fileType, safeAccount }) => {
     const callData = await safeAccount.encodeCallData({
       to: communityPortalAddress,
       data: encodeFunctionData({
@@ -812,34 +105,75 @@ const Home: NextPage = () => {
 
   const uploadFile = async () => {
     const account = await safeAccount();
-    const callData = await getCallData({
+    console.log({ idenity: account.address });
+    const callData = await getFileUploadCallData({
       safeAccount: account,
       metadataIPFSHash: "QmbgqqoYHAMbZT3SUrcZDvqoxgA2o2Gd6db4G2cu5gVVTu",
       contentIPFSHash: "QmYtiLzEhaJafgiBWTAYqkgd61wmtnV5p77Y2scBhyNXbF",
       fileType: 0,
     });
-    console.log(callData);
     const gasPrices = await pimlicoBundlerClient.getUserOperationGasPrice();
 
-    const userOperation = await createSmartAccount();
-
-    console.log({ userOperation, gasPrices });
-
-    const res = await userOperation.prepareUserOperationRequest({
+    const smartAccountClient = await initialiseSmartAccountClient();
+    const userOperation = await smartAccountClient.prepareUserOperationRequest({
       userOperation: {
         callData, // callData is the only required field in the partial user operation
-        nonce: toHex(toBytes(generatePrivateKey()).slice(0, 24), { size: 32 }) as any,
+        nonce: toHex(toBytes(generatePrivateKey()).slice(0, 24), { size: 32 }),
         maxFeePerGas: gasPrices.fast.maxFeePerGas,
         maxPriorityFeePerGas: gasPrices.fast.maxPriorityFeePerGas,
       },
       account,
     });
 
-    console.log(res);
+    userOperation.signature = await account.signUserOperation(userOperation);
+    const txnHash = await smartAccountClient.sendUserOperation({ userOperation });
+    console.log('Pimlicon Txn: ', txnHash);
+    const receipt = await pimlicoBundlerClient.waitForUserOperationReceipt({
+      hash: txnHash,
+    });
+    console.log('txn reciept: ', `https://sepolia.etherscan.io/tx/${receipt.receipt.transactionHash}`);
+  };
 
-    res.signature = await account.signUserOperation(res);
-    const txnHash = await userOperation.sendUserOperation({ userOperation: res });
-    console.log(txnHash);
+  const getAddCommunityContributorCallData = async ({ pcd, identityAddress, safeAccount }) => {
+    console.log(pcd, identityAddress);
+    const callData = await safeAccount.encodeCallData({
+      to: '0x5BD8669A700565a5237671ee33A5Cc4cDaBF01bF',
+      data: encodeFunctionData({
+        abi: CommunityPortalABI,
+        functionName: "addCommunityCollaborator",
+        args: [pcd, identityAddress],
+      }),
+      value: BigInt(0),
+    });
+    return callData;
+  };
+
+  const addCommunityContributor = async ({ pcd, identityAddress }) => {
+    const account = await safeAccount();
+    const callData = await getAddCommunityContributorCallData({
+      safeAccount: account,
+      pcd,
+      identityAddress,
+    });
+    const gasPrices = await pimlicoBundlerClient.getUserOperationGasPrice();
+
+    const smartAccountClient = await initialiseSmartAccountClient();
+    const userOperation = await smartAccountClient.prepareUserOperationRequest({
+      userOperation: {
+        callData, // callData is the only required field in the partial user operation
+        nonce: toHex(toBytes(generatePrivateKey()).slice(0, 24), { size: 32 }),
+        maxFeePerGas: gasPrices.fast.maxFeePerGas,
+        maxPriorityFeePerGas: gasPrices.fast.maxPriorityFeePerGas,
+      },
+      account,
+    });
+    userOperation.signature = await account.signUserOperation(userOperation);
+    const txnHash = await smartAccountClient.sendUserOperation({ userOperation });
+    console.log('Pimlicon Txn: ', txnHash);
+    const receipt = await pimlicoBundlerClient.waitForUserOperationReceipt({
+      hash: txnHash,
+    });
+    console.log('txn reciept: ', `https://sepolia.etherscan.io/tx/${receipt.receipt.transactionHash}`);
   };
 
   return (
@@ -860,6 +194,7 @@ const Home: NextPage = () => {
                 onClick={async () => {
                   try {
                     const res = await safeAccount();
+                    console.log('Created Identity: ', res.address);
                     setIdentityCreated(true);
                     setIdentityAddress(res.address);
                   } catch (e) {
@@ -879,11 +214,12 @@ const Home: NextPage = () => {
                 disabled={!pcd || addedCommunityContributor}
                 onClick={async () => {
                   try {
-                    await addCollborator({
-                      functionName: "addCommunityCollaborator",
-                      // @ts-ignore TODO: fix the type later with readonly fixed length bigInt arrays
-                      args: [pcd ? generateWitness(JSON.parse(pcd)) : undefined, identityAddress],
+                    console.log('adding collaborator: ', identityAddress);
+                    await addCommunityContributor({
+                      pcd: pcd ? generateWitness(JSON.parse(pcd)) : undefined,
+                      identityAddress,
                     });
+                    console.log('added collaborator: ', identityAddress);
                   } catch (e) {
                     notification.error(`Error: ${e}`);
                     return;
@@ -891,11 +227,7 @@ const Home: NextPage = () => {
                   setAddedCommunityContributor(true);
                 }}
               >
-                {isAddingCollborator ? (
-                  <span className="loading loading-spinner"></span>
-                ) : (
-                  "3. Verify (on-chain) and add community collaborator"
-                )}
+                {"3. Verify (on-chain) and add community collaborator"}
               </button>
             </div>
             <div className="tooltip" data-tip="Upload file and put it on community portal">
@@ -908,6 +240,7 @@ const Home: NextPage = () => {
                   } catch (e) {
                     console.log(e);
                   }
+                  setFileUploaded(true);
                 }}
               >
                 {"4. Add to community archive"}
@@ -917,7 +250,7 @@ const Home: NextPage = () => {
               <button
                 className="btn btn-ghost text-error underline normal-case"
                 onClick={() => {
-                  setAddedCommunityContributor(false);
+                  setFileUploaded(false);
                 }}
               >
                 Reset
