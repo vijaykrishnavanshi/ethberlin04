@@ -61,7 +61,7 @@ const ipfsData = [
 const Home: NextPage = () => {
   const [identityCreated, setIdentityCreated] = useState(false);
   const [fileUploaded, setFileUploaded] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<any>({});
+  const [selectedFile, setSelectedFile] = useState<any>(ipfsData[0]);
   const [addedCommunityContributor, setAddedCommunityContributor] = useState(false);
   const [identityAddress, setIdentityAddress] = useState<null | string>(null);
   const [pcd, setPcd] = useState<string>();
